@@ -6,9 +6,13 @@ import { Footer } from '@/components/custom/footer';
 import { Header } from '@/components/custom/header';
 import { ThemeToggle } from '@/components/custom/theme-toggle';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useContractMarkers } from '@/hooks/use-contract-markers';
 import { TradeControls } from './trade-controls';
+import { AutoTradePanel } from './auto-trade-panel';
+import type { AutoTraderConfig } from '../lib/auto-trader-types';
+import type { UseAutoTraderReturn } from '@/hooks/use-auto-trader';
 import type { ChartBarrier } from '@/components/custom/smart-chart';
 import type {
   AuthState,
@@ -71,6 +75,11 @@ export interface AccumulatorViewProps {
   sellContract: (contractId: number, bidPrice: string) => Promise<void>;
   sellingId: number | null;
 
+  // Auto-trader (AI engine)
+  autoConfig: AutoTraderConfig;
+  onAutoConfigChange: (patch: Partial<AutoTraderConfig>) => void;
+  autoTrader: UseAutoTraderReturn;
+
   // Chart data
   chartData: SmartChartChartData | undefined;
   getQuotes: UseSmartChartsApiReturn['getQuotes'];
@@ -119,6 +128,9 @@ export function AccumulatorView({
   getQuotes,
   subscribeQuotes,
   unsubscribeQuotes,
+  autoConfig,
+  onAutoConfigChange,
+  autoTrader,
   isLive,
   endEpoch,
   logoSrc,
@@ -223,26 +235,50 @@ export function AccumulatorView({
             ) : (
               <Card className="lg:h-[min(33.6rem,66vh)] lg:min-h-[384px] lg:overflow-y-auto">
                 <CardContent className="pt-4">
-                  <TradeControls
-                    growthRate={growthRate}
-                    onGrowthRateChange={setGrowthRate}
-                    growthRateOptions={growthRateOptions}
-                    isConnected={isConnected}
-                    stake={stake}
-                    onStakeChange={setStake}
-                    takeProfit={takeProfit}
-                    onTakeProfitChange={setTakeProfit}
-                    proposal={proposal}
-                    onBuy={buyContract}
-                    isBuying={isBuying}
-                    buyResult={buyResult}
-                    buyError={buyError}
-                    onClearBuyResult={clearBuyResult}
-                    activePosition={activeAccuPosition}
-                    onClose={sellContract}
-                    isClosing={sellingId === activeAccuPosition?.contract_id}
-                    isAuthenticated={authState === 'authenticated'}
-                  />
+                  <Tabs defaultValue="auto" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="auto">AI Auto-Trade</TabsTrigger>
+                      <TabsTrigger value="manual">Manual</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="auto" className="mt-4">
+                      <AutoTradePanel
+                        config={autoConfig}
+                        onConfigChange={onAutoConfigChange}
+                        isRunning={autoTrader.isRunning}
+                        onStart={autoTrader.start}
+                        onStop={autoTrader.stop}
+                        onReset={autoTrader.resetSession}
+                        stopReason={autoTrader.stopReason}
+                        stats={autoTrader.stats}
+                        signal={autoTrader.signal}
+                        log={autoTrader.log}
+                        isConnected={isConnected}
+                        isAuthenticated={authState === 'authenticated'}
+                      />
+                    </TabsContent>
+                    <TabsContent value="manual" className="mt-4">
+                      <TradeControls
+                        growthRate={growthRate}
+                        onGrowthRateChange={setGrowthRate}
+                        growthRateOptions={growthRateOptions}
+                        isConnected={isConnected}
+                        stake={stake}
+                        onStakeChange={setStake}
+                        takeProfit={takeProfit}
+                        onTakeProfitChange={setTakeProfit}
+                        proposal={proposal}
+                        onBuy={buyContract}
+                        isBuying={isBuying}
+                        buyResult={buyResult}
+                        buyError={buyError}
+                        onClearBuyResult={clearBuyResult}
+                        activePosition={activeAccuPosition}
+                        onClose={sellContract}
+                        isClosing={sellingId === activeAccuPosition?.contract_id}
+                        isAuthenticated={authState === 'authenticated'}
+                      />
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             )}
